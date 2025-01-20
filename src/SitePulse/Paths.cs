@@ -1,25 +1,22 @@
-﻿namespace SitePulse;
+﻿using System.Diagnostics;
+
+namespace SitePulse;
 
 public static class Paths
 {
-    public static readonly string AppFolder = GetAppFolder();
+    public static readonly string LogFolder = GetLogFolder();
 
-    private static string GetAppFolder()
+    private static string GetLogFolder()
     {
-        string appFolder = "/app";
+        string logFolder = Path.GetFullPath("./logs");
+        if (Debugger.IsAttached && !Directory.Exists(logFolder))
+            Directory.CreateDirectory(logFolder);
 
-        if (!Directory.Exists(appFolder))
-        {
-            appFolder = Path.GetFullPath("./app");
-        }
+        if (!Directory.Exists(logFolder))
+            throw new DirectoryNotFoundException(logFolder);
 
-        if (!Directory.Exists(appFolder))
-        {
-            Directory.CreateDirectory(appFolder);
-        }
+        Console.WriteLine($"Log folder: {logFolder}");
 
-        Console.WriteLine($"Application folder: {appFolder}");
-
-        return appFolder;
+        return logFolder;
     }
 }
