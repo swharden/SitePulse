@@ -1,9 +1,16 @@
 version: "3.9"
 services:
-  api:
+  asp:
+    profiles: ["asp"]
     build:
       context: .
     volumes:
       - ./volumes/pulse/logs:/app/logs
     ports:
       - "5123:8080"
+  php:
+    image: php:8.2-apache
+    ports:
+      - "8080:80"
+    volumes:
+      - ./www:/var/www/html
