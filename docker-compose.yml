@@ -4,6 +4,6 @@ services:
     build:
       context: .
     volumes:
-      - ./volumes/app/logs:/app/logs
+      - ./volumes/pulse/logs:/app/logs
     ports:
       - "5123:8080"
