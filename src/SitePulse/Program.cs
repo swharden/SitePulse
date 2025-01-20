@@ -1,9 +1,10 @@
 using SitePulse;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
 WebApplication app = builder.Build();
 
-app.MapGet("/", () => $"SitePulse, a privacy focused website analytics platform. [{DateTime.UtcNow}] {Paths.LogFolder}");
+app.MapGet("/", () => $"SitePulse, a privacy focused website analytics platform. [{DateTime.UtcNow}]");
 
 app.MapGet("/test.bmp", () => Results.File(Images.Random(), "image/bmp"));
 
@@ -22,12 +23,11 @@ app.MapGet("/pulse/{filename}", (HttpContext context, string filename) =>
     return Results.File(Images.MagentaPixel, "image/bmp");
 });
 
-app.MapGet("/logfiles/", () =>
-{
-    return Directory.GetFiles(Paths.LogFolder, "*.log");
-});
+app.MapGet("/logFolder", () => Paths.LogFolder);
 
-app.MapGet("/logfile/{filename}", (string filename) =>
+app.MapGet("/logFiles/", () => Directory.GetFiles(Paths.LogFolder, "*.log"));
+
+app.MapGet("/logFile/{filename}", (string filename) =>
 {
     string path = Path.Combine(Paths.LogFolder, Path.GetFileName(filename));
     return File.Exists(path)
