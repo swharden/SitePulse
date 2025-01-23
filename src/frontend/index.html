@@ -14,50 +14,216 @@
 </head>
 
 <body>
-    <div class="container">
-        <div id="pagesPerHour" class="w-100" style="height: 300px"></div>
+    <div class="container my-5" style="max-width: 900px;">
+        <h1>Banner Visibility Dashboard</h1>
+
+        <div class="mt-5" id="pagesPerHour" class="w-100" style="height: 300px"></div>
+        <div class="mt-5" id="usersPerHour" class="w-100" style="height: 300px"></div>
+        <div class="mt-5" id="usersPerDay" class="w-100" style="height: 300px"></div>
     </div>
     <script>
 
         function BinDateByHour(date) {
-            date.setMinutes(0);
-            date.setSeconds(0);
-            date.setMilliseconds(0);
-            return date;
+            const date2 = new Date(date);
+            date2.setMinutes(0);
+            date2.setSeconds(0);
+            date2.setMilliseconds(0);
+            return date2;
+        }
+
+        function BinDateByDay(date) {
+            const date2 = new Date(date);
+            date2.setHours(0);
+            date2.setMinutes(0);
+            date2.setSeconds(0);
+            date2.setMilliseconds(0);
+            return date2;
+        }
+
+        function getRecordFromLine(line) {
+            const parts = line.split(",");
+            const day = parts[0];
+            const time = parts[1].replaceAll("-", ":");
+            const date = new Date(day + " " + time + " UTC");
+            const id = parts[2];
+            return [date, id];
+        }
+
+        function getViewsPerHour(records) {
+            const firstRecord = records[0];
+            const lastRecord = records[records.length - 1];
+            const firstDate = BinDateByHour(firstRecord[0]);
+            const lastDate = BinDateByHour(lastRecord[0]);
+
+            const millisecondsInHour = 60 * 60 * 1000;
+            const counts = [];
+
+            for (let date = firstDate; date <= lastDate; date.setTime(date.getTime() + millisecondsInHour)) {
+                counts[date] = 0;
+            }
+
+            records.forEach(record => {
+                const binnedDate = BinDateByHour(record[0]);
+                counts[binnedDate] += 1;
+            });
+
+            const bins = Object.keys(counts);
+            const binCounts = Object.values(counts);
+            const data = bins.map(bin => [new Date(bin), counts[bin]]);
+            return data;
+        }
+
+        function getUsersPerHour(records) {
+            const firstRecord = records[0];
+            const lastRecord = records[records.length - 1];
+            const firstDate = BinDateByHour(firstRecord[0]);
+            const lastDate = BinDateByHour(lastRecord[0]);
+
+            const millisecondsInHour = 60 * 60 * 1000;
+            const counts = [];
+
+            for (let date = firstDate; date <= lastDate; date.setTime(date.getTime() + millisecondsInHour)) {
+                counts[date] = 0;
+            }
+
+            let lastBinnedDate = 0;
+            let seenIDs = [];
+            records.forEach(record => {
+                const binnedDate = BinDateByHour(record[0]);
+                if (binnedDate.toString() != lastBinnedDate.toString()) {
+                    seenIDs = [];
+                    lastBinnedDate = binnedDate;
+                }
+
+                const id = record[1];
+                if (!seenIDs.includes(id)) {
+                    counts[binnedDate] += 1;
+                    seenIDs.push(id);
+                }
+            });
+
+            const bins = Object.keys(counts);
+            const binCounts = Object.values(counts);
+            const data = bins.map(bin => [new Date(bin), counts[bin]]);
+            return data;
+        }
+
+        function getUsersPerDay(records) {
+            const firstRecord = records[0];
+            const lastRecord = records[records.length - 1];
+            const firstDate = BinDateByDay(firstRecord[0]);
+            const lastDate = BinDateByDay(lastRecord[0]);
+
+            const millisecondsInDay = 60 * 60 * 1000 * 24;
+            const counts = [];
+
+            for (let date = firstDate; date <= lastDate; date.setTime(date.getTime() + millisecondsInDay)) {
+                counts[date] = 0;
+            }
+
+            let lastBinnedDate = 0;
+            let seenIDs = [];
+            records.forEach(record => {
+                const binnedDate = BinDateByDay(record[0]);
+                if (binnedDate.toString() != lastBinnedDate.toString()) {
+                    seenIDs = [];
+                    lastBinnedDate = binnedDate;
+                }
+
+                const id = record[1];
+                if (!seenIDs.includes(id)) {
+                    counts[binnedDate] += 1;
+                    seenIDs.push(id);
+                }
+            });
+
+            const bins = Object.keys(counts);
+            const binCounts = Object.values(counts);
+            const data = bins.map(bin => [new Date(bin), counts[bin]]);
+            return data;
+        }
+
+        function darkenColor(colorStr) {
+            var color = Dygraph.toRGB_(colorStr);
+            color.r = Math.floor((255 + color.r) / 2);
+            color.g = Math.floor((255 + color.g) / 2);
+            color.b = Math.floor((255 + color.b) / 2);
+            return 'rgb(' + color.r + ',' + color.g + ',' + color.b + ')';
+        }
+
+        function barChartPlotter(e) {
+            var ctx = e.drawingContext;
+            var points = e.points;
+            var y_bottom = e.dygraph.toDomYCoord(0);
+
+            ctx.fillStyle = darkenColor(e.color);
+
+            var min_sep = Infinity;
+            for (var i = 1; i < points.length; i++) {
+                var sep = points[i].canvasx - points[i - 1].canvasx;
+                if (sep < min_sep) min_sep = sep;
+            }
+            var bar_width = Math.floor(2.0 / 3 * min_sep);
+
+            for (var i = 0; i < points.length; i++) {
+                var p = points[i];
+                var center_x = p.canvasx;
+
+                ctx.fillRect(center_x - bar_width / 2, p.canvasy,
+                    bar_width, y_bottom - p.canvasy);
+
+                ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
+                    bar_width, y_bottom - p.canvasy);
+            }
+        }
+
+        function getDateWindow(records) {
+            const firstRecord = records[0];
+            const lastRecord = records[records.length - 1];
+            const firstDate = BinDateByDay(firstRecord[0]);
+            const lastDate = BinDateByDay(lastRecord[0]);
+
+            const millisecondsInDay = 60 * 60 * 1000 * 24;
+            firstDate.setTime(firstDate.getTime() - millisecondsInDay * .5);
+            lastDate.setTime(lastDate.getTime() + millisecondsInDay * .5);
+
+            return [firstDate, lastDate];
         }
 
         const records = new String(raw).split("\n")
             .filter(x => x.length > 10)
-            .map(x => x.split(","))
-            .map(x => [new Date(x[0]), x[1]]);
-
-        const firstRecord = records[0];
-        const lastRecord = records[records.length - 1];
-        const firstDate = BinDateByHour(firstRecord[0]);
-        const lastDate = BinDateByHour(lastRecord[0]);
-
-        const millisecondsInHour = 60 * 60 * 1000;
-        const counts = [];
-
-        for (let date = firstDate; date <= lastDate; date.setTime(date.getTime() + millisecondsInHour)) {
-            counts[date] = 0;
-        }
-
-        records.forEach(record => {
-            const binnedDate = BinDateByHour(record[0]);
-            counts[binnedDate] += 1;
-        });
-
-        const bins = Object.keys(counts);
-        const binCounts = Object.values(counts);
-        const data = bins.map(bin => [new Date(bin), counts[bin]]);
+            .map(x => getRecordFromLine(x));
 
         Dygraph.onDOMready(function onDOMready() {
             g = new Dygraph(
                 document.getElementById("pagesPerHour"),
-                data,
+                getViewsPerHour(records),
                 {
-                    ylabel: 'Pages per Hour',
+                    title: 'Page Views per Hour',
+                    colors: ['blue'],
+                    fillGraph: true,
+                });
+        });
+
+        Dygraph.onDOMready(function onDOMready() {
+            g = new Dygraph(
+                document.getElementById("usersPerHour"),
+                getUsersPerHour(records),
+                {
+                    title: 'Users per Hour',
+                    colors: ['blue'],
+                    fillGraph: true,
+                });
+        });
+
+        Dygraph.onDOMready(function onDOMready() {
+            g = new Dygraph(
+                document.getElementById("usersPerDay"),
+                getUsersPerDay(records),
+                {
+                    plotter: barChartPlotter,
+                    dateWindow: getDateWindow(records),
+                    title: 'Users per Day',
                     colors: ['blue'],
                 });
         });
