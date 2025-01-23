@@ -40,13 +40,12 @@
             return date2;
         }
 
-        function getRecordFromLine(line) {
-            const parts = line.split(",");
-            const day = parts[0];
-            const time = parts[1].replaceAll("-", ":");
-            const date = new Date(day + " " + time + " UTC");
-            const id = parts[2];
-            return [date, id];
+        function getRecordFromLine(rawLine) {
+            const date = new Date(rawLine[0] + " UTC");
+            const id = rawLine[1];
+            const visibility = rawLine[2];
+            const record = [date, id, visibility];
+            return record;
         }
 
         function getViewsPerHour(records) {
@@ -70,6 +69,7 @@
             const bins = Object.keys(counts);
             const binCounts = Object.values(counts);
             const data = bins.map(bin => [new Date(bin), counts[bin]]);
+
             return data;
         }
 
@@ -190,43 +190,45 @@
             return [firstDate, lastDate];
         }
 
-        const records = new String(raw).split("\n")
-            .filter(x => x.length > 10)
-            .map(x => getRecordFromLine(x));
+        function updatePlots(records) {
 
-        Dygraph.onDOMready(function onDOMready() {
-            g = new Dygraph(
-                document.getElementById("pagesPerHour"),
-                getViewsPerHour(records),
-                {
-                    title: 'Page Views per Hour',
-                    colors: ['blue'],
-                    fillGraph: true,
-                });
-        });
+            Dygraph.onDOMready(function onDOMready() {
+                g = new Dygraph(
+                    document.getElementById("pagesPerHour"),
+                    getViewsPerHour(records),
+                    {
+                        title: 'Page Views per Hour',
+                        colors: ['blue'],
+                        fillGraph: true,
+                    });
+            });
+            Dygraph.onDOMready(function onDOMready() {
+                g = new Dygraph(
+                    document.getElementById("usersPerHour"),
+                    getUsersPerHour(records),
+                    {
+                        title: 'Users per Hour',
+                        colors: ['blue'],
+                        fillGraph: true,
+                    });
+            });
 
-        Dygraph.onDOMready(function onDOMready() {
-            g = new Dygraph(
-                document.getElementById("usersPerHour"),
-                getUsersPerHour(records),
-                {
-                    title: 'Users per Hour',
-                    colors: ['blue'],
-                    fillGraph: true,
-                });
-        });
+            Dygraph.onDOMready(function onDOMready() {
+                g = new Dygraph(
+                    document.getElementById("usersPerDay"),
+                    getUsersPerDay(records),
+                    {
+                        plotter: barChartPlotter,
+                        dateWindow: getDateWindow(records),
+                        title: 'Users per Day',
+                        colors: ['blue'],
+                    });
+            });
+        }
 
-        Dygraph.onDOMready(function onDOMready() {
-            g = new Dygraph(
-                document.getElementById("usersPerDay"),
-                getUsersPerDay(records),
-                {
-                    plotter: barChartPlotter,
-                    dateWindow: getDateWindow(records),
-                    title: 'Users per Day',
-                    colors: ['blue'],
-                });
-        });
+        const records = raw.map(x => getRecordFromLine(x));
+        updatePlots(records);
+
     </script>
 </body>
 
